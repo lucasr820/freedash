@@ -7,6 +7,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <App />
   </React.StrictMode>,
 )
+
 const COLORS = {
   bg: "#0A0A0F",
   surface: "#13131A",
@@ -39,23 +40,9 @@ const formatCurrency = (value) =>
 const formatDate = (date) =>
   new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" }).format(new Date(date));
 
-const INITIAL_CLIENTS = [
-  { id: 1, name: "TechStartup Co.", color: "#7C5CFC", avatar: "T" },
-  { id: 2, name: "Studio Criativo", color: "#22D3A5", avatar: "S" },
-  { id: 3, name: "E-commerce Plus", color: "#FF7A3D", avatar: "E" },
-];
-
-const INITIAL_PROJECTS = [
-  { id: 1, clientId: 1, name: "App Mobile v2", rate: 120, status: "active", totalHours: 24, budget: 5000 },
-  { id: 2, clientId: 2, name: "Identidade Visual", rate: 90, status: "active", totalHours: 18, budget: 3200 },
-  { id: 3, clientId: 3, name: "Loja Online", rate: 100, status: "completed", totalHours: 40, budget: 8000 },
-];
-
-const INITIAL_SESSIONS = [
-  { id: 1, projectId: 1, date: "2026-03-20", duration: 7200, note: "Implementação telas auth" },
-  { id: 2, projectId: 2, date: "2026-03-21", duration: 5400, note: "Conceito logo principal" },
-  { id: 3, projectId: 1, date: "2026-03-22", duration: 3600, note: "Revisão UI components" },
-];
+const INITIAL_CLIENTS = [];
+const INITIAL_PROJECTS = [];
+const INITIAL_SESSIONS = [];
 
 // Reusable Components
 const Badge = ({ children, color = COLORS.accent }) => (
@@ -100,186 +87,6 @@ const StatCard = ({ label, value, sub, color = COLORS.accent, icon }) => (
   </Card>
 );
 
-// TIMER MODULE
-function TimerModule({ projects, clients, sessions, setSessions }) {
-  const [status, setStatus] = useState("idle"); // idle | running | paused | break
-  const [elapsed, setElapsed] = useState(0);
-  const [breakTime, setBreakTime] = useState(0);
-  const [selectedProject, setSelectedProject] = useState(projects[0]?.id || null);
-  const [note, setNote] = useState("");
-  const [entries, setEntries] = useState([]);
-  const intervalRef = useRef(null);
-  const startRef = useRef(null);
-
-  useEffect(() => {
-    if (status === "running") {
-      intervalRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
-    } else if (status === "break") {
-      intervalRef.current = setInterval(() => setBreakTime(b => b + 1), 1000);
-    } else {
-      clearInterval(intervalRef.current);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [status]);
-
-  const handleStart = () => {
-    if (status === "idle") {
-      startRef.current = new Date();
-      setElapsed(0); setBreakTime(0);
-    }
-    setStatus("running");
-  };
-
-  const handleBreak = () => setStatus("break");
-  const handleReturn = () => setStatus("running");
-
-  const handleFinish = () => {
-    if (!selectedProject || elapsed === 0) return;
-    const newSession = {
-      id: Date.now(), projectId: selectedProject,
-      date: new Date().toISOString().split("T")[0],
-      duration: elapsed, note, breakTime
-    };
-    setSessions(s => [newSession, ...s]);
-    setEntries(e => [newSession, ...e]);
-    setElapsed(0); setBreakTime(0); setNote(""); setStatus("idle");
-  };
-
-  const proj = projects.find(p => p.id === selectedProject);
-  const client = proj ? clients.find(c => c.id === proj.clientId) : null;
-
-  const statusConfig = {
-    idle: { label: "Pronto para iniciar", color: COLORS.textMuted, pulse: false },
-    running: { label: "Trabalhando", color: COLORS.green, pulse: true },
-    break: { label: "Em intervalo", color: COLORS.orange, pulse: true },
-    paused: { label: "Pausado", color: COLORS.textMuted, pulse: false },
-  };
-  const sc = statusConfig[status];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Main Timer */}
-      <Card style={{ textAlign: "center", padding: "32px 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}>
-          <div style={{
-            width: 8, height: 8, borderRadius: "50%", background: sc.color,
-            boxShadow: sc.pulse ? `0 0 12px ${sc.color}` : "none",
-            animation: sc.pulse ? "pulse 1.5s ease-in-out infinite" : "none"
-          }} />
-          <span style={{ fontSize: 12, color: sc.color, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{sc.label}</span>
-        </div>
-
-        {/* Clock */}
-        <div style={{
-          fontFamily: "'Space Mono', monospace", fontSize: 56, fontWeight: 700,
-          color: status === "break" ? COLORS.orange : COLORS.text,
-          letterSpacing: "-2px", lineHeight: 1, marginBottom: 8
-        }}>
-          {formatTime(status === "break" ? breakTime : elapsed)}
-        </div>
-
-        {status === "break" && (
-          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>
-            Trabalho acumulado: <span style={{ color: COLORS.text, fontFamily: "'Space Mono', monospace" }}>{formatTime(elapsed)}</span>
-          </div>
-        )}
-
-        {/* Project Selector */}
-        <div style={{ margin: "20px 0 16px" }}>
-          <select value={selectedProject || ""} onChange={e => setSelectedProject(Number(e.target.value))}
-            disabled={status !== "idle"}
-            style={{
-              background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
-              color: COLORS.text, borderRadius: 10, padding: "10px 16px", fontSize: 14,
-              width: "100%", outline: "none", cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif"
-            }}>
-            {projects.filter(p => p.status === "active").map(p => {
-              const c = clients.find(x => x.id === p.clientId);
-              return <option key={p.id} value={p.id}>{c?.name} — {p.name}</option>;
-            })}
-          </select>
-        </div>
-
-        {(status === "running" || status === "break" || elapsed > 0) && (
-          <input value={note} onChange={e => setNote(e.target.value)}
-            placeholder="O que está fazendo? (opcional)"
-            style={{
-              background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
-              color: COLORS.text, borderRadius: 10, padding: "10px 16px", fontSize: 13,
-              width: "100%", outline: "none", marginBottom: 16, boxSizing: "border-box",
-              fontFamily: "'DM Sans', sans-serif"
-            }} />
-        )}
-
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          {status === "idle" && (
-            <button onClick={handleStart} style={{
-              background: COLORS.green, color: "#000", border: "none",
-              borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15,
-              cursor: "pointer", fontFamily: "'Syne', sans-serif", letterSpacing: "0.02em",
-              boxShadow: `0 4px 24px ${COLORS.green}44`
-            }}>▶ Bater Ponto</button>
-          )}
-
-          {status === "running" && (<>
-            <button onClick={handleBreak} style={{
-              background: COLORS.orange + "22", color: COLORS.orange, border: `1px solid ${COLORS.orange}44`,
-              borderRadius: 12, padding: "12px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif"
-            }}>☕ Intervalo</button>
-            <button onClick={handleFinish} style={{
-              background: COLORS.accentGlow, color: COLORS.accent, border: `1px solid ${COLORS.accent}44`,
-              borderRadius: 12, padding: "12px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif"
-            }}>✓ Finalizar</button>
-          </>)}
-
-          {status === "break" && (<>
-            <button onClick={handleReturn} style={{
-              background: COLORS.green + "22", color: COLORS.green, border: `1px solid ${COLORS.green}44`,
-              borderRadius: 12, padding: "12px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif"
-            }}>↩ Voltar ao Trabalho</button>
-            <button onClick={handleFinish} style={{
-              background: COLORS.redSoft, color: COLORS.red, border: `1px solid ${COLORS.red}44`,
-              borderRadius: 12, padding: "12px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif"
-            }}>✗ Encerrar mesmo assim</button>
-          </>)}
-        </div>
-      </Card>
-
-      {/* Today's Sessions */}
-      <div>
-        <h3 style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>Registros de Hoje</h3>
-        {sessions.filter(s => s.date === new Date().toISOString().split("T")[0]).length === 0
-          ? <div style={{ color: COLORS.textFaint, fontSize: 13, textAlign: "center", padding: 24 }}>Nenhum registro hoje</div>
-          : sessions.filter(s => s.date === new Date().toISOString().split("T")[0]).map(s => {
-            const p = projects.find(x => x.id === s.projectId);
-            const c = p ? clients.find(x => x.id === p.clientId) : null;
-            return (
-              <Card key={s.id} style={{ marginBottom: 8, padding: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  {c && <Avatar letter={c.avatar} color={c.color} size={32} />}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>{p?.name}</div>
-                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>{s.note || "Sem descrição"}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 14, color: COLORS.green }}>{formatTime(s.duration)}</div>
-                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{formatCurrency((s.duration / 3600) * (p?.rate || 0))}</div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-      </div>
-    </div>
-  );
-}
-
 // CLIENTS MODULE
 function ClientsModule({ clients, setClients, projects, sessions }) {
   const [showForm, setShowForm] = useState(false);
@@ -302,12 +109,7 @@ function ClientsModule({ clients, setClients, projects, sessions }) {
       const projSessions = sessions.filter(s => s.projectId === p.id);
       return sum + projSessions.reduce((a, s) => a + s.duration, 0) / 3600;
     }, 0);
-    const totalRevenue = clientProjects.reduce((sum, p) => {
-      const projSessions = sessions.filter(s => s.projectId === p.id);
-      const hours = projSessions.reduce((a, s) => a + s.duration, 0) / 3600;
-      return sum + hours * p.rate;
-    }, 0);
-    return { projects: clientProjects.length, hours: totalHours.toFixed(1), revenue: totalRevenue };
+    return { projects: clientProjects.length, hours: totalHours.toFixed(1) };
   };
 
   return (
@@ -355,10 +157,6 @@ function ClientsModule({ clients, setClients, projects, sessions }) {
                   <span style={{ fontSize: 12, color: COLORS.textMuted }}>{stats.hours}h registradas</span>
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.green, fontFamily: "'Syne', sans-serif" }}>{formatCurrency(stats.revenue)}</div>
-                <div style={{ fontSize: 11, color: COLORS.textMuted }}>total ganho</div>
-              </div>
             </div>
           </Card>
         );
@@ -370,16 +168,16 @@ function ClientsModule({ clients, setClients, projects, sessions }) {
 // PROJECTS MODULE
 function ProjectsModule({ projects, setProjects, clients, sessions }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ clientId: "", name: "", rate: "", budget: "" });
+  const [form, setForm] = useState({ clientId: "", name: "", budget: "" });
 
   const addProject = () => {
     if (!form.name || !form.clientId) return;
     setProjects(p => [...p, {
       id: Date.now(), clientId: Number(form.clientId), name: form.name,
-      rate: Number(form.rate) || 0, budget: Number(form.budget) || 0,
+      budget: Number(form.budget) || 0,
       status: "active", totalHours: 0
     }]);
-    setForm({ clientId: "", name: "", rate: "", budget: "" });
+    setForm({ clientId: "", name: "", budget: "" });
     setShowForm(false);
   };
 
@@ -419,22 +217,13 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
                 color: COLORS.text, borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none",
                 fontFamily: "'DM Sans', sans-serif"
               }} />
-            <div style={{ display: "flex", gap: 10 }}>
-              <input type="number" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: e.target.value }))}
-                placeholder="R$/hora"
+            <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))}
+                placeholder="Budget total (R$)"
                 style={{
-                  flex: 1, background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
+                  background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
                   color: COLORS.text, borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none",
                   fontFamily: "'DM Sans', sans-serif"
                 }} />
-              <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))}
-                placeholder="Budget total"
-                style={{
-                  flex: 1, background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
-                  color: COLORS.text, borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none",
-                  fontFamily: "'DM Sans', sans-serif"
-                }} />
-            </div>
             <button onClick={addProject} style={{
               background: COLORS.green, color: "#000", border: "none",
               borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer"
@@ -446,8 +235,7 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
       {projects.map(proj => {
         const client = clients.find(c => c.id === proj.clientId);
         const stats = getProjectStats(proj.id);
-        const earned = parseFloat(stats.hours) * proj.rate;
-        const progress = proj.budget > 0 ? Math.min((earned / proj.budget) * 100, 100) : 0;
+        const progress = proj.budget > 0 ? Math.min((parseFloat(stats.hours) / (proj.budget / 100)) * 100, 100) : 0;
 
         return (
           <Card key={proj.id} style={{ marginBottom: 12 }}>
@@ -462,28 +250,22 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
               </Badge>
             </div>
 
-            <div style={{ display: "flex", gap: 16, marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 16, marginBottom: proj.budget > 0 ? 14 : 0 }}>
               <div>
                 <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 2 }}>Horas</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, fontFamily: "'Space Mono', monospace" }}>{stats.hours}h</div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 2 }}>Taxa</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>R${proj.rate}/h</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 2 }}>Ganhos</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.green }}>{formatCurrency(earned)}</div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 2 }}>Sessões</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>{stats.sessions}</div>
               </div>
             </div>
 
             {proj.budget > 0 && (
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>Budget usado</span>
-                  <span style={{ fontSize: 11, color: progress > 80 ? COLORS.red : COLORS.textMuted }}>
-                    {progress.toFixed(0)}% de {formatCurrency(proj.budget)}
-                  </span>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>Budget</span>
+                  <span style={{ fontSize: 11, color: COLORS.textMuted }}>{formatCurrency(proj.budget)}</span>
                 </div>
                 <div style={{ background: COLORS.surfaceAlt, borderRadius: 4, height: 6, overflow: "hidden" }}>
                   <div style={{
@@ -509,15 +291,8 @@ function DashboardModule({ projects, clients, sessions }) {
   const todaySessions = sessions.filter(s => s.date === today);
   const monthSessions = sessions.filter(s => s.date.startsWith(currentMonth));
 
-  const calcRevenue = (sess) => sess.reduce((sum, s) => {
-    const p = projects.find(x => x.id === s.projectId);
-    return sum + (s.duration / 3600) * (p?.rate || 0);
-  }, 0);
-
   const todayHours = todaySessions.reduce((a, s) => a + s.duration, 0) / 3600;
   const monthHours = monthSessions.reduce((a, s) => a + s.duration, 0) / 3600;
-  const todayRevenue = calcRevenue(todaySessions);
-  const monthRevenue = calcRevenue(monthSessions);
 
   // Weekly activity (last 7 days)
   const last7 = Array.from({ length: 7 }, (_, i) => {
@@ -529,20 +304,22 @@ function DashboardModule({ projects, clients, sessions }) {
   });
   const maxHours = Math.max(...last7.map(d => d.hours), 1);
 
-  // Top clients this month
-  const clientRevenues = clients.map(c => {
-    const rev = calcRevenue(monthSessions.filter(s => projects.find(p => p.id === s.projectId)?.clientId === c.id));
-    return { ...c, revenue: rev };
-  }).sort((a, b) => b.revenue - a.revenue).filter(c => c.revenue > 0);
+  // Top clients this month by hours
+  const clientHours = clients.map(c => {
+    const hrs = monthSessions
+      .filter(s => projects.find(p => p.id === s.projectId)?.clientId === c.id)
+      .reduce((a, s) => a + s.duration, 0) / 3600;
+    return { ...c, hours: hrs };
+  }).sort((a, b) => b.hours - a.hours).filter(c => c.hours > 0);
 
   return (
     <div>
       {/* Stats grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <StatCard label="Hoje" value={`${todayHours.toFixed(1)}h`} sub={formatCurrency(todayRevenue)} color={COLORS.green} icon="⏱" />
-        <StatCard label="Este mês" value={`${monthHours.toFixed(1)}h`} sub={formatCurrency(monthRevenue)} color={COLORS.accent} icon="📅" />
+        <StatCard label="Hoje" value={`${todayHours.toFixed(1)}h`} sub={`${todaySessions.length} sessões`} color={COLORS.green} icon="⏱" />
+        <StatCard label="Este mês" value={`${monthHours.toFixed(1)}h`} sub={`${monthSessions.length} registros`} color={COLORS.accent} icon="📅" />
         <StatCard label="Clientes" value={clients.length} sub={`${projects.filter(p => p.status === "active").length} projetos ativos`} color={COLORS.orange} icon="👤" />
-        <StatCard label="Registros" value={monthSessions.length} sub={`${todaySessions.length} hoje`} color={COLORS.accentSoft} icon="📝" />
+        <StatCard label="Projetos" value={projects.length} sub={`${projects.filter(p => p.status === "completed").length} concluídos`} color={COLORS.accentSoft} icon="◫" />
       </div>
 
       {/* Weekly chart */}
@@ -575,10 +352,10 @@ function DashboardModule({ projects, clients, sessions }) {
       </Card>
 
       {/* Top clients */}
-      {clientRevenues.length > 0 && (
+      {clientHours.length > 0 && (
         <Card style={{ marginBottom: 16 }}>
           <h3 style={{ fontSize: 13, color: COLORS.text, fontWeight: 700, fontFamily: "'Syne', sans-serif", marginBottom: 14 }}>Top clientes este mês</h3>
-          {clientRevenues.slice(0, 3).map((c, i) => (
+          {clientHours.slice(0, 3).map((c, i) => (
             <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < 2 ? 12 : 0 }}>
               <Avatar letter={c.avatar} color={c.color} size={32} />
               <div style={{ flex: 1 }}>
@@ -586,12 +363,12 @@ function DashboardModule({ projects, clients, sessions }) {
                 <div style={{ background: COLORS.surfaceAlt, borderRadius: 3, height: 4, marginTop: 4 }}>
                   <div style={{
                     height: "100%", borderRadius: 3,
-                    width: `${(c.revenue / clientRevenues[0].revenue) * 100}%`,
+                    width: `${(c.hours / clientHours[0].hours) * 100}%`,
                     background: c.color
                   }} />
                 </div>
               </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.green, fontFamily: "'Syne', sans-serif" }}>{formatCurrency(c.revenue)}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent, fontFamily: "'Space Mono', monospace" }}>{c.hours.toFixed(1)}h</span>
             </div>
           ))}
         </Card>
@@ -626,7 +403,6 @@ function DashboardModule({ projects, clients, sessions }) {
 // NAV CONFIG
 const TABS = [
   { id: "dashboard", label: "Dashboard", icon: "◈" },
-  { id: "timer", label: "Timer", icon: "⏱" },
   { id: "projects", label: "Projetos", icon: "◫" },
   { id: "clients", label: "Clientes", icon: "◉" },
 ];
@@ -703,7 +479,6 @@ export default function FreelanceOS() {
         {/* Content */}
         <div style={{ padding: "20px 16px 100px", flex: 1, overflowY: "auto" }}>
           {tab === "dashboard" && <DashboardModule projects={projects} clients={clients} sessions={sessions} />}
-          {tab === "timer" && <TimerModule projects={projects} clients={clients} sessions={sessions} setSessions={setSessions} />}
           {tab === "projects" && <ProjectsModule projects={projects} setProjects={setProjects} clients={clients} sessions={sessions} />}
           {tab === "clients" && <ClientsModule clients={clients} setClients={setClients} projects={projects} sessions={sessions} />}
         </div>
