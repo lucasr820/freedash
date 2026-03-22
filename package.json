@@ -1,0 +1,22 @@
+{
+  "name": "freelance-dashboard",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "homepage": "https://lucasr820.github.io/freedash",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "gh-pages": "^6.3.0",
+    "vite": "^7.3.1"
+  }
+}
