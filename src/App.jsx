@@ -165,9 +165,72 @@ function ClientsModule({ clients, setClients, projects, sessions }) {
   );
 }
 
+// LOG HOURS FORM — inline dentro do card do projeto
+function LogHoursForm({ projectId, onSave, onCancel }) {
+  const today = new Date().toISOString().split("T")[0];
+  const [hours, setHours] = useState("");
+  const [minutes, setMinutes] = useState("");
+  const [date, setDate] = useState(today);
+  const [note, setNote] = useState("");
+
+  const handleSave = () => {
+    const totalSecs = (parseFloat(hours) || 0) * 3600 + (parseFloat(minutes) || 0) * 60;
+    if (totalSecs <= 0) return;
+    onSave({ projectId, date, duration: totalSecs, note });
+  };
+
+  const inputStyle = {
+    background: COLORS.bg, border: `1px solid ${COLORS.border}`,
+    color: COLORS.text, borderRadius: 8, padding: "8px 10px",
+    fontSize: 13, outline: "none", fontFamily: "'DM Sans', sans-serif", width: "100%",
+    boxSizing: "border-box",
+  };
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${COLORS.border}` }}>
+      <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>
+        Lançar horas
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>Horas</div>
+          <input type="number" min="0" value={hours} onChange={e => setHours(e.target.value)}
+            placeholder="0" style={inputStyle} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>Minutos</div>
+          <input type="number" min="0" max="59" value={minutes} onChange={e => setMinutes(e.target.value)}
+            placeholder="0" style={inputStyle} />
+        </div>
+        <div style={{ flex: 2 }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4 }}>Data</div>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            style={{ ...inputStyle, colorScheme: "dark" }} />
+        </div>
+      </div>
+      <input value={note} onChange={e => setNote(e.target.value)}
+        placeholder="Descrição (opcional)"
+        style={{ ...inputStyle, marginBottom: 10 }} />
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={handleSave} style={{
+          flex: 1, background: COLORS.green, color: "#000", border: "none",
+          borderRadius: 8, padding: "10px", fontWeight: 700, fontSize: 13, cursor: "pointer",
+          fontFamily: "'DM Sans', sans-serif"
+        }}>✓ Salvar</button>
+        <button onClick={onCancel} style={{
+          flex: 1, background: COLORS.surfaceAlt, color: COLORS.textMuted, border: `1px solid ${COLORS.border}`,
+          borderRadius: 8, padding: "10px", fontWeight: 600, fontSize: 13, cursor: "pointer",
+          fontFamily: "'DM Sans', sans-serif"
+        }}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 // PROJECTS MODULE
-function ProjectsModule({ projects, setProjects, clients, sessions }) {
-  const [showForm, setShowForm] = useState(false);
+function ProjectsModule({ projects, setProjects, clients, sessions, setSessions }) {
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [loggingId, setLoggingId] = useState(null); // qual projeto está com o form aberto
   const [form, setForm] = useState({ clientId: "", name: "", budget: "" });
 
   const addProject = () => {
@@ -178,7 +241,12 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
       status: "active", totalHours: 0
     }]);
     setForm({ clientId: "", name: "", budget: "" });
-    setShowForm(false);
+    setShowNewForm(false);
+  };
+
+  const saveSession = ({ projectId, date, duration, note }) => {
+    setSessions(s => [{ id: Date.now(), projectId, date, duration, note }, ...s]);
+    setLoggingId(null);
   };
 
   const getProjectStats = (projectId) => {
@@ -191,14 +259,14 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, fontFamily: "'Syne', sans-serif" }}>Projetos</h2>
-        <button onClick={() => setShowForm(!showForm)} style={{
+        <button onClick={() => setShowNewForm(!showNewForm)} style={{
           background: COLORS.accentGlow, color: COLORS.accent, border: `1px solid ${COLORS.accent}44`,
           borderRadius: 10, padding: "8px 16px", fontWeight: 600, fontSize: 13, cursor: "pointer",
           fontFamily: "'DM Sans', sans-serif"
         }}>+ Novo</button>
       </div>
 
-      {showForm && (
+      {showNewForm && (
         <Card style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <select value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))}
@@ -218,12 +286,12 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
                 fontFamily: "'DM Sans', sans-serif"
               }} />
             <input type="number" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))}
-                placeholder="Budget total (R$)"
-                style={{
-                  background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
-                  color: COLORS.text, borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none",
-                  fontFamily: "'DM Sans', sans-serif"
-                }} />
+              placeholder="Budget total (R$)"
+              style={{
+                background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`,
+                color: COLORS.text, borderRadius: 10, padding: "10px 14px", fontSize: 14, outline: "none",
+                fontFamily: "'DM Sans', sans-serif"
+              }} />
             <button onClick={addProject} style={{
               background: COLORS.green, color: "#000", border: "none",
               borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer"
@@ -232,14 +300,21 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
         </Card>
       )}
 
+      {projects.length === 0 && (
+        <div style={{ textAlign: "center", padding: "40px 0", color: COLORS.textFaint, fontSize: 13 }}>
+          Nenhum projeto ainda. Crie um acima.
+        </div>
+      )}
+
       {projects.map(proj => {
         const client = clients.find(c => c.id === proj.clientId);
         const stats = getProjectStats(proj.id);
         const progress = proj.budget > 0 ? Math.min((parseFloat(stats.hours) / (proj.budget / 100)) * 100, 100) : 0;
+        const isLogging = loggingId === proj.id;
 
         return (
           <Card key={proj.id} style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
               {client && <Avatar letter={client.avatar} color={client.color} size={38} />}
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, fontFamily: "'Syne', sans-serif" }}>{proj.name}</div>
@@ -250,19 +325,26 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
               </Badge>
             </div>
 
-            <div style={{ display: "flex", gap: 16, marginBottom: proj.budget > 0 ? 14 : 0 }}>
-              <div>
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-end", marginBottom: proj.budget > 0 ? 12 : 0 }}>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 2 }}>Horas</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, fontFamily: "'Space Mono', monospace" }}>{stats.hours}h</div>
               </div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 2 }}>Sessões</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>{stats.sessions}</div>
               </div>
+              {proj.status === "active" && !isLogging && (
+                <button onClick={() => setLoggingId(proj.id)} style={{
+                  background: COLORS.accentGlow, color: COLORS.accent, border: `1px solid ${COLORS.accent}44`,
+                  borderRadius: 8, padding: "7px 14px", fontWeight: 600, fontSize: 12, cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap"
+                }}>+ Horas</button>
+              )}
             </div>
 
             {proj.budget > 0 && (
-              <div>
+              <div style={{ marginBottom: isLogging ? 0 : 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ fontSize: 11, color: COLORS.textMuted }}>Budget</span>
                   <span style={{ fontSize: 11, color: COLORS.textMuted }}>{formatCurrency(proj.budget)}</span>
@@ -275,6 +357,14 @@ function ProjectsModule({ projects, setProjects, clients, sessions }) {
                   }} />
                 </div>
               </div>
+            )}
+
+            {isLogging && (
+              <LogHoursForm
+                projectId={proj.id}
+                onSave={saveSession}
+                onCancel={() => setLoggingId(null)}
+              />
             )}
           </Card>
         );
@@ -377,14 +467,19 @@ function DashboardModule({ projects, clients, sessions }) {
       {/* Recent sessions */}
       <Card>
         <h3 style={{ fontSize: 13, color: COLORS.text, fontWeight: 700, fontFamily: "'Syne', sans-serif", marginBottom: 14 }}>Histórico recente</h3>
-        {sessions.slice(0, 5).map((s, i) => {
+        {sessions.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "16px 0", color: COLORS.textFaint, fontSize: 13 }}>
+            Nenhum registro ainda. Lance horas em um projeto.
+          </div>
+        ) : sessions.slice(0, 5).map((s, i) => {
           const p = projects.find(x => x.id === s.projectId);
           const c = p ? clients.find(x => x.id === p.clientId) : null;
           return (
             <div key={s.id} style={{
               display: "flex", alignItems: "center", gap: 10,
-              paddingBottom: i < 4 ? 10 : 0, marginBottom: i < 4 ? 10 : 0,
-              borderBottom: i < 4 ? `1px solid ${COLORS.border}` : "none"
+              paddingBottom: i < Math.min(sessions.length, 5) - 1 ? 10 : 0,
+              marginBottom: i < Math.min(sessions.length, 5) - 1 ? 10 : 0,
+              borderBottom: i < Math.min(sessions.length, 5) - 1 ? `1px solid ${COLORS.border}` : "none"
             }}>
               {c && <Avatar letter={c.avatar} color={c.color} size={28} />}
               <div style={{ flex: 1 }}>
@@ -479,7 +574,7 @@ export default function FreelanceOS() {
         {/* Content */}
         <div style={{ padding: "20px 16px 100px", flex: 1, overflowY: "auto" }}>
           {tab === "dashboard" && <DashboardModule projects={projects} clients={clients} sessions={sessions} />}
-          {tab === "projects" && <ProjectsModule projects={projects} setProjects={setProjects} clients={clients} sessions={sessions} />}
+          {tab === "projects" && <ProjectsModule projects={projects} setProjects={setProjects} clients={clients} sessions={sessions} setSessions={setSessions} />}
           {tab === "clients" && <ClientsModule clients={clients} setClients={setClients} projects={projects} sessions={sessions} />}
         </div>
 
