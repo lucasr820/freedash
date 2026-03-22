@@ -540,7 +540,7 @@ export default function FreelanceOS() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" }}>
-                Freelance<span style={{ color: COLORS.accent }}>OS</span>
+                Freelance<span style={{ color: COLORS.accent }}>CONTROL</span>
               </div>
               <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
                 {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
